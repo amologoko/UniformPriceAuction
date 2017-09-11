@@ -1,0 +1,7 @@
+dist/bundle.js
+package-lock.json
+*.swp
+*.swo
+node_modules/
+.DS_Store/
+/coverage
