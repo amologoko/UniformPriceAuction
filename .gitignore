@@ -3,5 +3,5 @@ package-lock.json
 *.swp
 *.swo
 node_modules/
-.DS_Store/
+.DS_Store
 /coverage

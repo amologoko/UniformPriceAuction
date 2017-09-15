@@ -47,6 +47,8 @@ contract('DALAuction', function ([owner, purchaser, beneficiary]) {
     this.auction = await DALAuction.new(owner, GOAL);
     this.vault = DALVault.at(await this.auction.vault());
     this.token = DALToken.at(await this.vault.token());
+
+    this.ownerInitialBalance = web3.eth.getBalance(owner);
   });
 
   
@@ -86,17 +88,19 @@ contract('DALAuction', function ([owner, purchaser, beneficiary]) {
 
     await this.auction.processBid(beneficiary).should.be.fulfilled;
     await this.auction.processBid(purchaser).should.be.fulfilled;
-    //await this.auction.processRefund(beneficiary).should.be.fulfilled;
-    //await this.auction.processRefund(purchaser).should.be.fulfilled;
-    await this.auction.claimTokens(beneficiary).should.be.fulfilled;
+    await this.auction.getRefund(beneficiary).should.be.fulfilled;
+    //await this.auction.getRefund(purchaser).should.be.fulfilled;
+    //await this.auction.claimTokens(beneficiary).should.be.fulfilled;
     await this.auction.claimTokens(purchaser, {from: purchaser}).should.be.fulfilled;
-    await increaseTimeTo(this.afterEndTime);
     await this.auction.finalizeAuction().should.be.fulfilled;
+    (await this.auction.phase()).should.be.bignumber.equal(AuctionPhase.Finalized);
+    (await this.vault.state()).should.be.bignumber.equal(VaultState.Closed);
     (await this.auction.depositOf(beneficiary)).should.be.bignumber.equal(0);
     (await this.auction.depositOf(purchaser)).should.be.bignumber.equal(0);
-    (await this.token.balanceOf(beneficiary)).should.be.bignumber.equal(ether(1));
+    (await this.token.balanceOf(beneficiary)).should.be.bignumber.equal(ether(0));
     (await this.token.balanceOf(purchaser)).should.be.bignumber.equal(ether(0.5));
-    (await this.token.balanceOf(this.vault.address)).should.be.bignumber.equal(INITIAL_SUPPLY.sub(ether(1.5)));
+    (await this.token.balanceOf(owner)).should.be.bignumber.equal(INITIAL_SUPPLY.sub(ether(0.5)));
+    web3.eth.getBalance(owner).should.be.bignumber.gt(this.ownerInitialBalance);
   });
 
 });

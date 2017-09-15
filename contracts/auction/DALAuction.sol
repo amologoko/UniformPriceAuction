@@ -85,7 +85,6 @@ contract DALAuction is Ownable {
    * @dev Must be called after crowdsale ends, to do some extra finalization work
    */
   function finalizeAuction() onlyOwner atPhase(Phase.BookFrozen) {
-    require(now > endTime); 
     vault.close();
     nextPhase();
     Finalized();

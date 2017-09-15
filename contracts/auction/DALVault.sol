@@ -68,4 +68,12 @@ contract DALVault is RefundVault {
     claimed[_beneficiary] = claimed[_beneficiary].add(qty);
     Claimed(_beneficiary, depositedValue, qty);
   }
+
+  function close() onlyOwner {
+    require(state == State.Refunding);
+    state = State.Closed;
+    wallet.transfer(this.balance);
+    assert(token.transfer(wallet, token.balanceOf(this)));
+    Closed();
+  }
 }
