@@ -28,8 +28,7 @@ contract DALVault is RefundVault {
   event Authorized(address beneficiary, uint256 weiAmount, uint256 tokenUnits);
   event Claimed(address beneficiary, uint256 weiAmount, uint256 tokenUnits);
 
-  function DALVault(address _wallet, uint256 _maxTokens) 
-  RefundVault(_wallet)
+  function DALVault(address _wallet, uint256 _maxTokens) RefundVault(_wallet)
   {
     require(_maxTokens > 0); 
     maxTokens = _maxTokens;

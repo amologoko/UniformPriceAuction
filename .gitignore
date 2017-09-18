@@ -1,7 +1,13 @@
+.idea
+
 dist/bundle.js
-package-lock.json
 *.swp
 *.swo
-node_modules/
 .DS_Store
+
+node_modules/
 /coverage
+/build
+
+package-lock.json
+npm-debug.log
