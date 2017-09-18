@@ -51,10 +51,16 @@ contract DALAuction is Ownable {
   }
 
   // auction bid
-  function placeBid() payable atPhase(Phase.Open) {
-    require(msg.value != 0);  
+  function placeBid() payable {
+    require(isBidValid());
     vault.deposit.value(msg.value)(msg.sender);
     Bid(msg.sender, msg.value);
+  }
+
+  // @return true if the bid can be placed
+  function isBidValid() internal returns (bool) {
+    //return (now >= startTime) && now <= endTime && (phase == Phase.Open) && (msg.value != 0);
+    return (phase == Phase.Open || phase == Phase.BookFrozen) && (msg.value != 0);
   }
 
   function freezeBook() onlyOwner atPhase(Phase.Open) {
