@@ -12,9 +12,11 @@ import './DALVault.sol';
 contract DALAuction is Ownable {
   using SafeMath for uint256;
 
-  enum Phase { Open, BookFrozen, Finalized }
-  //Initial Phase
-  Phase public phase = Phase.Open;
+  enum Phase { Open, BookFrozen, BookClosed, Settled } 
+  Phase public phase;
+
+  // refund vault used to hold funds while auction is running
+  DALVault public vault;
   // end of auction timestamp
   uint256 public endTime;
 
@@ -24,25 +26,24 @@ contract DALAuction is Ownable {
    * @param value weis paid for purchase
    */ 
   event Bid(address beneficiary, uint256 value);
-
   event BookFrozen();
-  event Finalized();
-
-  // refund vault used to hold funds while crowdsale is running
-  DALVault public vault;
+  event BookClosed();
+  event Settled();
 
   modifier atPhase(Phase _phase) {
     require(phase == _phase);
     _;
   }
 
-  function nextPhase() internal {
-    phase = Phase(uint(phase) + 1);
+  modifier beforePhase(Phase _phase) {
+    require(phase < _phase);
+    _;
   }
 
-  function DALAuction(address _wallet, uint256 _goal) {
-    vault = new DALVault(_wallet, _goal); 
+  function DALAuction(address _wallet) {
+    vault = new DALVault(_wallet); 
     endTime = now + 30 days;
+    phase = Phase.Open;
   }
 
   // fallback function can be used to bid for tokens
@@ -51,52 +52,55 @@ contract DALAuction is Ownable {
   }
 
   // auction bid
-  function placeBid() payable {
-    require(isBidValid());
+  function placeBid() payable beforePhase(Phase.BookClosed) {
+    require(msg.value != 0);
     vault.deposit.value(msg.value)(msg.sender);
     Bid(msg.sender, msg.value);
   }
 
-  // @return true if the bid can be placed
-  function isBidValid() internal returns (bool) {
-    //return (now >= startTime) && now <= endTime && (phase == Phase.Open) && (msg.value != 0);
-    return (phase == Phase.Open || phase == Phase.BookFrozen) && (msg.value != 0);
-  }
-
-  function freezeBook() onlyOwner atPhase(Phase.Open) {
-    vault.enableRefunds();
-    nextPhase();
+  function freezeBook(uint256 _price) onlyOwner {
+    vault.setPrice(_price);
+    phase = Phase.BookFrozen;
     BookFrozen();
   }
 
-  function setCutoff(uint256 _price) onlyOwner {
-    vault.setPrice(_price);
+  // After the book is frozen the bidder can claim tokens here
+  function getTokens() atPhase(Phase.BookFrozen) {
+    vault.claim(msg.sender);
   }
 
-  function processBid(address _beneficiary) onlyOwner {
-    vault.authorize(_beneficiary);
-  }
-
-  // After the book is closed bidders can initiate refunds here
-  function getRefund(address _beneficiary) atPhase(Phase.BookFrozen) {
-    vault.refund(_beneficiary);
-  }
-
-  // After the book is closed bidders can claim tokens here
-  function claimTokens(address _beneficiary) atPhase(Phase.BookFrozen) {
+  // The owner can send tokens here
+  function sendTokens(address _beneficiary) onlyOwner {
     vault.claim(_beneficiary);
   }
 
   /**
-   * @dev Must be called after crowdsale ends, to do some extra finalization work
+   * @dev Must be called after auction ends, to enable refunds
    */
-  function finalizeAuction() onlyOwner atPhase(Phase.BookFrozen) {
+  function closeBook() onlyOwner {
+    vault.enableRefunds();
+    phase = Phase.BookClosed;
+    BookClosed();
+  }
+  
+  // After the book is closed bidders can initiate refunds here
+  function getRefund() atPhase(Phase.BookClosed) {
+    vault.refund(msg.sender);
+  }
+
+  // The owner can send refunds here
+  function sendRefund(address _beneficiary) onlyOwner {
+    vault.refund(_beneficiary);
+  }
+
+  function settleAuction() onlyOwner {
+    phase = Phase.Settled;
     vault.close();
-    nextPhase();
-    Finalized();
+    Settled();
   }
 
   function depositOf(address _beneficiary) constant returns (uint256 balance) {
     return vault.deposited(_beneficiary);
   }
+
 }
