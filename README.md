@@ -1,4 +1,4 @@
-# The leagiON DAL smart contracts and tests
+# leagiON DAL smart contracts and tests
 
 We have open sourced under Apache License this Uniform Price Auction token issue framework for Ethereum because leagiON DAL token has migrated to Stellar Distributed Ledger.  
 
