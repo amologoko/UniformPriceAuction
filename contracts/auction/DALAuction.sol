@@ -17,8 +17,6 @@ contract DALAuction is Ownable {
 
   // refund vault used to hold funds while auction is running
   DALVault public vault;
-  // end of auction timestamp
-  uint256 public endTime;
 
   /**
    * Event for token bid logging
@@ -41,8 +39,7 @@ contract DALAuction is Ownable {
   }
 
   function DALAuction(address _wallet) {
-    vault = new DALVault(_wallet); 
-    endTime = now + 30 days;
+    vault = new DALVault(_wallet);
     phase = Phase.Open;
   }
 
@@ -53,12 +50,11 @@ contract DALAuction is Ownable {
 
   // auction bid
   function placeBid() payable beforePhase(Phase.BookClosed) {
-    require(msg.value != 0);
     vault.deposit.value(msg.value)(msg.sender);
     Bid(msg.sender, msg.value);
   }
 
-  function freezeBook(uint256 _price) onlyOwner {
+  function freezeBook(uint256 _price) onlyOwner atPhase(Phase.Open) {
     vault.setPrice(_price);
     phase = Phase.BookFrozen;
     BookFrozen();
@@ -93,7 +89,7 @@ contract DALAuction is Ownable {
     vault.refund(_beneficiary);
   }
 
-  function settleAuction() onlyOwner {
+  function settleAuction() onlyOwner atPhase(Phase.BookClosed) {
     phase = Phase.Settled;
     vault.close();
     Settled();

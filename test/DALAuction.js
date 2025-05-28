@@ -42,8 +42,6 @@ contract('DALAuction', function ([owner, bidder1, bidder2]) {
 
     beforeEach(async function () {
         this.startTime = latestTime();
-        this.endTime = this.startTime + duration.days(30);
-        this.afterEndTime = this.endTime + duration.seconds(1);
 
         this.auction = await DALAuction.new(owner);
         this.vault = DALVault.at(await this.auction.vault());
@@ -98,18 +96,29 @@ contract('DALAuction', function ([owner, bidder1, bidder2]) {
         await this.auction.getTokens({from: bidder1}).should.be.rejectedWith(EVMThrow);
         await this.auction.getRefund({from: bidder2}).should.be.fulfilled;
 
-        await this.auction.settleAuction().should.be.fulfilled;
-        (await this.auction.phase()).should.be.bignumber.equal(AuctionPhase.Settled);
-        (await this.vault.state()).should.be.bignumber.equal(VaultState.Closed);
-        (await this.auction.depositOf(bidder2)).should.be.bignumber.equal(0);
-        (await this.auction.depositOf(bidder1)).should.be.bignumber.equal(0);
-        (await this.token.balanceOf(bidder2)).should.be.bignumber.equal(ether(1));
-        (await this.token.balanceOf(bidder1)).should.be.bignumber.equal(ether(0.5));
-        (await this.token.balanceOf(owner)).should.be.bignumber.equal(INITIAL_SUPPLY.sub(ether(1.5)));
-        web3.eth.getBalance(owner).should.be.bignumber.gt(this.ownerInitialBalance);
+        await this.auction.settleAuction().should.be.rejectedWith(EVMThrow);
+        (await this.auction.phase()).should.be.bignumber.equal(AuctionPhase.BookClosed);
+        (await this.vault.state()).should.be.bignumber.equal(VaultState.Refunding);
 
         await this.auction.placeBid({value: ether(1), from: bidder1}).should.be.rejectedWith(EVMThrow);
         await this.auction.sendTransaction({value: ether(1), from: bidder2, gasPrice: 0}).should.be.rejectedWith(EVMThrow);
+    });
+
+    it('should not allow freezing the book twice', async function () {
+        await this.auction.freezeBook(1).should.be.fulfilled;
+        await this.auction.freezeBook(1).should.be.rejectedWith(EVMThrow);
+    });
+
+    it('should reject claims that yield zero tokens', async function () {
+        await this.auction.sendTransaction({value: 1, from: bidder1}).should.be.fulfilled;
+        await this.auction.freezeBook(10).should.be.fulfilled;
+        await this.auction.getTokens({from: bidder1}).should.be.rejectedWith(EVMThrow);
+    });
+
+    it('should not allow settlement before the book is closed', async function () {
+        await this.auction.placeBid({value: ether(1), from: bidder1}).should.be.fulfilled;
+        await this.auction.freezeBook(1).should.be.fulfilled;
+        await this.auction.settleAuction().should.be.rejectedWith(EVMThrow);
     });
 
 })

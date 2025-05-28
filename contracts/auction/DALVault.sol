@@ -36,7 +36,6 @@ contract DALVault is RefundVault {
   }
 
   function setPrice(uint256 _price) onlyOwner {
-    require(_price > 0);
     price = _price;
     PriceSet(price);
   }
@@ -44,8 +43,8 @@ contract DALVault is RefundVault {
   function claim(address _beneficiary) onlyOwner {
     require(price > 0);
     uint256 depositedValue = deposited[_beneficiary];
-    require(depositedValue > 0);
     uint256 qty = depositedValue.div(price);
+    require(qty > 0);
     uint256 toClaim = tokensClaimed.add(qty);
     require(toClaim <= TOKEN_GOAL);
     deposited[_beneficiary] = 0;
@@ -61,3 +60,4 @@ contract DALVault is RefundVault {
     Closed();
   }
 }
+

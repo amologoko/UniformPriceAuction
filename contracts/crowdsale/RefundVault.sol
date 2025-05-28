@@ -29,7 +29,6 @@ contract RefundVault is Ownable {
   }
 
   function deposit(address investor) onlyOwner payable {
-    require(state == State.Active);
     deposited[investor] = deposited[investor].add(msg.value);
   }
 
@@ -41,7 +40,6 @@ contract RefundVault is Ownable {
   }
 
   function enableRefunds() onlyOwner {
-    require(state == State.Active);
     state = State.Refunding;
     RefundsEnabled();
   }
